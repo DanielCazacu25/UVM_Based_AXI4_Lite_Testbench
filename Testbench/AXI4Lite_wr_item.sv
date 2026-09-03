@@ -12,7 +12,9 @@ class AXI4Lite_wr_item #(parameter DATA_WIDTH = 32, parameter ADDR_WIDTH = 4) ex
     `uvm_object_param_utils(axi_wr_itm)
 
     function new(string name = "AXI4Lite_wr_item");
+
         super.new(name);
+        
     endfunction
 
 endclass
