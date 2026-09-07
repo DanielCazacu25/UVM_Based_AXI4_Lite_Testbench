@@ -46,6 +46,6 @@ interface AXI4Lite_inf #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32) (i
 
     modport DRIVER_AXI4Lite(clocking drv_cb);
     modport MONITOR_AXI4Lite(clocking mon_cb);
-    modport IRQ_AXI4Lite(clocking drv_irq_cb);
+    modport IRQ_DRIVER_AXI4Lite(clocking drv_irq_cb);
 
 endinterface
