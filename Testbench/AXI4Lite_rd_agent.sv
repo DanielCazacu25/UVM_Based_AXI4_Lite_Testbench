@@ -17,7 +17,7 @@ class AXI4Lite_rd_agent extends uvm_agent;
 
     function void build_phase(uvm_phase phase);
 
-        build_phase(phase);
+        super.build_phase(phase);
 
         rd_seqr = AXI4Lite_rd_sequencer :: type_id :: create("rd_seqr",this);
 
