@@ -104,6 +104,15 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
                 pass_count++;
             end
         end 
+        default : begin
+            if(rd_itm.RDATA != 0) begin
+                `uvm_error(get_type_name(),$sformatf("Error - Incorrect DATA for invalid ADDR(expected RDATA = 0)"))
+                fail_count++;
+            end
+            else begin
+                pass_count++;
+            end
+        end
         endcase
     endfunction
 

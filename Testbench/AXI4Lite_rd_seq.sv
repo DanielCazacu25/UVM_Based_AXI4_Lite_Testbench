@@ -23,7 +23,7 @@ class AXI4Lite_rd_seq extends uvm_sequence #(AXI4Lite_rd_item);
 
             start_item(rd_itm);
 
-            assert(rd_itm.randomize());
+            assert(rd_itm.randomize() with {ARADDR inside {4'h0, 4'h4, 4'h8, 4'hC}});
 
             finish_item(rd_itm);
             
