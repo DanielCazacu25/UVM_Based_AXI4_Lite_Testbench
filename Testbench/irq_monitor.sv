@@ -21,7 +21,7 @@ class irq_monitor extends uvm_monitor;
 
         irq_ap = new("irq_ap",this);
 
-        if(!uvm_config_db#(virtual AXI4Lite_inf) :: get(this,"","inf",inf))
+        if(!uvm_config_db#(virtual AXI4Lite_inf.MONITOR_AXI4Lite) :: get(this,"","inf",inf))
 
             `uvm_fatal("NOVIF","Interface not found")
         

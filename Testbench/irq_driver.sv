@@ -17,7 +17,7 @@ class irq_driver extends uvm_driver #(irq_seq_item);
         
         super.build_phase(phase);
 
-        if(!uvm_config_db#(virtual AXI4Lite_inf) :: get(this,"","inf",inf))
+        if(!uvm_config_db#(virtual AXI4Lite_inf.RQ_DRIVER_AXI4Lite) :: get(this,"","inf",inf))
 
             `uvm_fatal("NOVIF","Interface not found")
         
