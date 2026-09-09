@@ -1,4 +1,5 @@
 import uvm_pkg::*;
+import AXI4Lite_pkg::*;
 
 module AXI4Lite_top;
 
