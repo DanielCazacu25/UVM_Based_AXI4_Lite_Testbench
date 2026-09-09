@@ -14,6 +14,10 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
     logic irq_ref_model;
     logic irq_copy;
     int pass_count, fail_count;
+    localparam CTRL_ADDR       = 4'h0;
+    localparam STATUS_ADDR     = 4'h4;
+    localparam DATA_ADDR       = 4'h8;
+    localparam IRQ_STATUS_ADDR = 4'hC;
 
     uvm_analysis_imp_wr #(AXI4Lite_wr_item, this_sb) wr_imp;
 
@@ -33,6 +37,8 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
 
         pass_count = 0;
         fail_count = 0;
+        irq_ref_model = 0;
+        irq_copy = 0;
 
         wr_imp = new("wr_imp",this);
         rd_imp = new("rd_imp",this);
@@ -53,7 +59,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
     function void write_wr(AXI4Lite_wr_item wr_itm);
         
         case(wr_itm.AWADDR)
-            CTRL_ADDR : expected_regs[wr_itm.AWADDR] = {(DATA_WIDTH-3){1'b0},wr_itm.WDATA[2:0]};
+            CTRL_ADDR : expected_regs[wr_itm.AWADDR] = {{(DATA_WIDTH-3){1'b0}},wr_itm.WDATA[2:0]};
             DATA_ADDR : expected_regs[wr_itm.AWADDR] = wr_itm.WDATA;
             STATUS_ADDR : ;
             IRQ_STATUS_ADDR : begin
@@ -69,8 +75,8 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
         
         case (rd_itm.ARADDR)
         CTRL_ADDR : begin
-            if(rd_itm.RDATA != {(DATA_WIDTH - 3){1'b0},expected_regs[rd_itm.ARADDR]})begin
-                `uvm_error(get_type_name(),$sformatf("Error - CTRL_ADDR"))
+        if(rd_itm.RDATA != {{(DATA_WIDTH - 3){1'b0}},expected_regs[rd_itm.ARADDR]})begin
+                `uvm_error(get_type_name(),$sformatf("Error - CTRL_ADDR"));
                 fail_count++;
             end
             else begin
@@ -79,7 +85,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
         end  
         DATA_ADDR : begin
             if(rd_itm.RDATA != expected_regs[rd_itm.ARADDR])begin
-                `uvm_error(get_type_name(),$sformatf("Error - DATA_ADDR"))
+                `uvm_error(get_type_name(),$sformatf("Error - DATA_ADDR"));
                 fail_count++;
             end
             else begin
@@ -88,7 +94,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
         end  
         STATUS_ADDR : begin
             if($isunknown(rd_itm.RDATA)) begin
-                `uvm_error(get_type_name(),$sformatf("Error - STATUS_ADDR"))
+                `uvm_error(get_type_name(),$sformatf("Error - STATUS_ADDR"));
                 fail_count++;
             end
             else begin
@@ -96,7 +102,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
             end
         end 
         IRQ_STATUS_ADDR : begin
-            if(rd_itm.RDATA != {(DATA_WIDTH -1){1'b0},irq_ref_model}) begin
+            if(rd_itm.RDATA != {{(DATA_WIDTH -1){1'b0}},irq_ref_model}) begin
                 `uvm_error(get_type_name(),$sformatf("Error - IRQ_STATUS_ADDR"))
                 fail_count++;
             end
@@ -106,7 +112,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
         end 
         default : begin
             if(rd_itm.RDATA != 0) begin
-                `uvm_error(get_type_name(),$sformatf("Error - Incorrect DATA for invalid ADDR(expected RDATA = 0)"))
+                `uvm_error(get_type_name(),$sformatf("Error - Incorrect DATA for invalid ADDR(expected RDATA = 0)"));
                 fail_count++;
             end
             else begin

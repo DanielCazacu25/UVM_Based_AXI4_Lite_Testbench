@@ -1,8 +1,6 @@
-`ifndef AXI4LITE_PKG_SV
-`define AXI4LITE_PKG_SV
-
 package AXI4Lite_pkg;
 
+    `include 
     import uvm_pkg::*;
     `include "uvm_macros.svh"
     `include "AXI4Lite_wr_item.sv"
@@ -27,8 +25,7 @@ package AXI4Lite_pkg;
     `include "AXI4Lite_virtual_sequencer.sv"
     `include "AXI4Lite_env.sv"
     `include "AXI4Lite_virtual_sequence.sv"
-    `include "AXI4Lite_test.sv
+    `include "AXI4Lite_test.sv"
 
 endpackage
 
-`endif

@@ -6,11 +6,9 @@ module AXI4Lite_top;
     bit ACLK;
     bit ARESETN;
 
-    always #5 ACLK = ~ACLK;
-
     AXI4Lite_inf inf(ACLK,ARESETN);
 
-    AXI4Lite_Slave DUT(.ACLK(inf.ACLK),
+    AXI4Lite_slave DUT(.ACLK(inf.ACLK),
                          .ARESETN(inf.ARESETN),
                          .AWADDR(inf.AWADDR),
                          .AWVALID(inf.AWVALID),
@@ -29,6 +27,15 @@ module AXI4Lite_top;
                          .RVALID(inf.RVALID),
                          .RREADY(inf.RREADY),
                          .irq_set_i(inf.irq_set_i));
+
+    always #5 ACLK = ~ACLK;
+
+    initial begin
+        
+        ARESETN = 1'b0;
+        @(negedge ACLK) ARESETN = 1'b1;
+        
+    end
 
     initial begin
 

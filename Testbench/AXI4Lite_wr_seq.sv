@@ -23,7 +23,7 @@ class AXI4Lite_wr_seq extends uvm_sequence #(AXI4Lite_wr_item);
 
             start_item(wr_itm);
 
-            assert(wr_itm.randomize() with {AWADDR inside {4'h0, 4'h4, 4'h8, 4'hC}});
+            assert(wr_itm.randomize() with {AWADDR inside {4'h0, 4'h4, 4'h8, 4'hC};});
 
             finish_item(wr_itm);
 
