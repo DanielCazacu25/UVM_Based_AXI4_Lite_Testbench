@@ -39,8 +39,8 @@ class AXI4Lite_rd_driver extends uvm_driver #(AXI4Lite_rd_item);
         while (!inf.drv_cb.RVALID)
             @(inf.drv_cb);
 
-        inf.drv_cb.RDATA <= rd_itm.RDATA;
-        inf.drv_cb.RRESP <= rd_itm.RRESP;
+        rd_itm.RDATA = inf.drv_cb.RDATA;
+        rd_itm.RRESP = inf.drv_cb.RRESP;
 
         @(inf.drv_cb);
         while (inf.drv_cb.RVALID)
