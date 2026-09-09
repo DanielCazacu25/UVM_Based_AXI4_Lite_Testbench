@@ -25,10 +25,8 @@ class AXI4Lite_wr_driver extends uvm_driver #(AXI4Lite_wr_item);
 
     task write_drv(AXI4Lite_wr_item wr_itm);
 
-        @(inf.drv_cb);
         inf.drv_cb.AWADDR <= wr_itm.AWADDR;
         inf.drv_cb.WDATA <= wr_itm.WDATA;
-
         inf.drv_cb.AWVALID <= 1'b1;
         inf.drv_cb.WVALID <= 1'b1;
         inf.drv_cb.BREADY <= 1'b1;
