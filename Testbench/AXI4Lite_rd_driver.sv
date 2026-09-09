@@ -1,13 +1,13 @@
 `include "uvm_macros.svh"
 import uvm_pkg::*;
 
-class AXI4Lite_wr_driver extends uvm_driver #(AXI4Lite_wr_item);
+class AXI4Lite_rd_driver extends uvm_driver #(AXI4Lite_rd_item);
 
     virtual AXI4Lite_inf.DRIVER_AXI4Lite inf;
 
-    `uvm_component_utils(AXI4Lite_wr_driver)
+    `uvm_component_utils(AXI4Lite_rd_driver)
 
-    function new(string name = "AXI4Lite_wr_driver", uvm_component parent);
+    function new(string name = "AXI4Lite_rd_driver", uvm_component parent);
 
         super.new(name,parent);
         
@@ -23,47 +23,47 @@ class AXI4Lite_wr_driver extends uvm_driver #(AXI4Lite_wr_item);
         
     endfunction
 
-    task write_drv(AXI4Lite_wr_item wr_itm);
+    task read_drv(AXI4Lite_rd_item rd_itm);
+
+        inf.drv_cb.ARADDR <= rd_itm.ARADDR;
+        inf.drv_cb.ARVALID <= 1'b1;
+        inf.drv_cb.RREADY <= 1'b1;
 
         @(inf.drv_cb);
-        inf.drv_cb.AWADDR <= wr_itm.AWADDR;
-        inf.drv_cb.WDATA <= wr_itm.WDATA;
-
-        inf.drv_cb.AWVALID <= 1'b1;
-        inf.drv_cb.WVALID <= 1'b1;
-        inf.drv_cb.BREADY <= 1'b1;
-
-        @(inf.drv_cb);
-        while (!(inf.drv_cb.AWREADY && inf.drv_cb.WREADY))
+        while (!inf.drv_cb.ARREADY)
             @(inf.drv_cb);
 
-        inf.drv_cb.AWVALID <= 1'b0;
-        inf.drv_cb.WVALID <= 1'b0;
+        inf.drv_cb.ARVALID <= 1'b0;
 
         @(inf.drv_cb);
-        while (!inf.drv_cb.BVALID)
+        while (!inf.drv_cb.RVALID)
             @(inf.drv_cb);
 
-        wr_itm.BRESP = inf.drv_cb.BRESP;
+        inf.drv_cb.RDATA <= rd_itm.RDATA;
+        inf.drv_cb.RRESP <= rd_itm.RRESP;
 
-        inf.drv_cb.BREADY <= 1'b0;
+        @(inf.drv_cb);
+        while (inf.drv_cb.RVALID)
+            @(inf.drv_cb);
 
+        inf.drv_cb.RREADY <= 1'b0;
+        
         
     endtask
 
     task run_phase(uvm_phase phase);
 
-        AXI4Lite_wr_item wr_itm;
+        AXI4Lite_rd_item rd_itm;
 
         forever begin
             
-            seq_item_port.get_next_item(wr_itm);
+            seq_item_port.get_next_item(rd_itm);
 
-            write_drv(wr_itm);
+            read_drv(rd_itm);
 
             seq_item_port.item_done();
 
-            `uvm_info(get_type_name(),$sformatf("WR DRIVER:AWADDR = %0d | WDATA = %0d",wr_itm.AWADDR,wr_itm.WDATA),UVM_HIGH)
+            `uvm_info(get_type_name(),$sformatf("RD DRIVER:ARADDR = %0d | RDATA = %0d",rd_itm.ARADDR,rd_itm.RDATA),UVM_HIGH)
 
         end
         
