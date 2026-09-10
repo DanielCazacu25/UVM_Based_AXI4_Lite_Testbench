@@ -11,14 +11,14 @@ class AXI4Lite_env extends uvm_env;
 
     AXI4Lite_rd_agent rd_agn;
 
-    irq_agent irq_agn; 
+    irq_agent irq_agn;
 
     AXI4Lite_virtual_sequencer virt_seqr;
 
     function new(string name = "AXI4Lite_env", uvm_component parent);
 
         super.new(name,parent);
-        
+
     endfunction
 
     function void build_phase(uvm_phase phase);
@@ -34,7 +34,7 @@ class AXI4Lite_env extends uvm_env;
         irq_agn = irq_agent :: type_id :: create("irq_agn",this);
 
         virt_seqr = AXI4Lite_virtual_sequencer :: type_id :: create("virt_seqr",this);
-      
+
     endfunction
 
     function void connect_phase(uvm_phase phase);
@@ -52,6 +52,7 @@ class AXI4Lite_env extends uvm_env;
         virt_seqr.rd_seqr = rd_agn.rd_seqr;
 
         virt_seqr.irq_seqr = irq_agn.seqr;
-      
+
     endfunction
+    
 endclass

@@ -1,6 +1,5 @@
 package AXI4Lite_pkg;
 
-    `include 
     import uvm_pkg::*;
     `include "uvm_macros.svh"
     `include "AXI4Lite_wr_item.sv"
@@ -21,11 +20,10 @@ package AXI4Lite_pkg;
     `include "irq_monitor.sv"
     `include "irq_seq.sv"
     `include "irq_agent.sv"
-    `include "AXI4Lite_scoreboard.sv"        // foloseste wr_item, rd_item, irq_seq_item
+    `include "AXI4Lite_scoreboard.sv"
     `include "AXI4Lite_virtual_sequencer.sv"
     `include "AXI4Lite_env.sv"
     `include "AXI4Lite_virtual_sequence.sv"
     `include "AXI4Lite_test.sv"
 
 endpackage
-
