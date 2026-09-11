@@ -31,6 +31,8 @@ class AXI4Lite_test extends uvm_test;
 
         virt_seq.start(env.virt_seqr);
 
+        phase.phase_done.set_drain_time(this, 200ns);
+
         phase.drop_objection(this);
       
     endtask
