@@ -64,126 +64,127 @@ module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32
             rd_pending <= 1'b0;
     end
 
-    property no_low_VALID_until_READY_high(logic CLK, logic VALID, logic READY);
-        @(posedge CLK) disable iff(!ARESETN)
+    property no_low_VALID_until_READY_high(logic VALID, logic READY);
+        @(posedge ACLK) disable iff(!ARESETN)
         (VALID && !READY) |=> VALID;
     endproperty
 
-    property no_change_until_handshake_finishes(logic CLK, logic VALID,logic READY, logic stable_flag);
-        @(posedge CLK) disable iff(!ARESETN)
+    property no_change_until_handshake_finishes(logic VALID,logic READY, logic stable_flag);
+        @(posedge ACLK) disable iff(!ARESETN)
         (VALID && !READY) |=> stable_flag;
     endproperty
 
-    property no_undefined_while_VALID_active(logic CLK, logic VALID, logic [DATA_WIDTH-1:0] payload);
-        @(posedge CLK) disable iff(!ARESETN)
+    property no_undefined_while_VALID_active(logic VALID, logic [DATA_WIDTH-1:0] payload);
+        @(posedge ACLK) disable iff(!ARESETN)
         VALID |-> !$isunknown(payload);
     endproperty
 
-    property valid_must_occur_after_addr_data_accepted(logic CLK, logic accepted, logic VALID, int N);
-        @(posedge CLK) disable iff(!ARESETN)
-        accepted |-> ##[0:N] VALID;
+    property valid_must_occur_after_addr_data_accepted(logic accepted, logic VALID);
+        @(posedge ACLK) disable iff(!ARESETN)
+        accepted |-> ##[0:MAX_RESP_CYC] VALID;
     endproperty
     //NOTE: VALID within 1'b1[*N] would also work
 
-    property no_valid_while_low_flag(logic CLK, logic VALID, logic flag);
-        @(posedge CLK) disable iff(!ARESETN)
+    property no_valid_while_low_flag(logic VALID, logic flag);
+        @(posedge ACLK) disable iff(!ARESETN)
         VALID |-> flag;
     endproperty // >okafpo
 
-    property outputs_idle_in_reset(logic CLK, logic RESET, logic flag);
-        @(posedge CLK) !RESET |=> !flag;
+    property outputs_idle_in_reset(logic RESET, logic flag);
+        @(posedge ACLK) !RESET |=> !flag;
     endproperty
 
-    property resp_is_okay_when_valid_is_active(logic CLK, logic VALID, logic [1:0] RESP);
-        @(posedge CLK) disable iff(!ARESETN)
+    property resp_is_okay_when_valid_is_active(logic VALID, logic [1:0] RESP);
+        @(posedge ACLK) disable iff(!ARESETN)
         VALID |-> RESP == RESP_OKAY;
     endproperty
     
-    a_aw_valid_held : assert property (no_low_VALID_until_READY_high(ACLK, AWVALID, AWREADY))
+        a_aw_valid_held : assert property (no_low_VALID_until_READY_high(AWVALID, AWREADY))
         else $error("AW: AWVALID deasserted before AWREADY was seen");
 
-    a_w_valid_held : assert property (no_low_VALID_until_READY_high(ACLK, WVALID, WREADY))
+    a_w_valid_held : assert property (no_low_VALID_until_READY_high(WVALID, WREADY))
         else $error("W: WVALID deasserted before WREADY was seen");
 
-    a_b_valid_held : assert property (no_low_VALID_until_READY_high(ACLK, BVALID, BREADY))
+    a_b_valid_held : assert property (no_low_VALID_until_READY_high(BVALID, BREADY))
         else $error("B: BVALID deasserted before BREADY was seen");
 
-    a_ar_valid_held : assert property (no_low_VALID_until_READY_high(ACLK, ARVALID, ARREADY))
+    a_ar_valid_held : assert property (no_low_VALID_until_READY_high(ARVALID, ARREADY))
         else $error("AR: ARVALID deasserted before ARREADY was seen");
 
-    a_r_valid_held : assert property (no_low_VALID_until_READY_high(ACLK, RVALID, RREADY))
+    a_r_valid_held : assert property (no_low_VALID_until_READY_high(RVALID, RREADY))
         else $error("R: RVALID deasserted before RREADY was seen");
 
-    a_awaddr_stable : assert property (no_change_until_handshake_finishes(ACLK, AWVALID, AWREADY, awaddr_stable))
+    a_awaddr_stable : assert property (no_change_until_handshake_finishes(AWVALID, AWREADY, awaddr_stable))
         else $error("AW: AWADDR changed while AWVALID was high and AWREADY low");
 
-    a_wdata_stable : assert property (no_change_until_handshake_finishes(ACLK, WVALID, WREADY, wdata_stable))
+    a_wdata_stable : assert property (no_change_until_handshake_finishes(WVALID, WREADY, wdata_stable))
         else $error("W: WDATA changed while WVALID was high and WREADY low");
 
-    a_bresp_stable : assert property (no_change_until_handshake_finishes(ACLK, BVALID, BREADY, bresp_stable))
+    a_bresp_stable : assert property (no_change_until_handshake_finishes(BVALID, BREADY, bresp_stable))
         else $error("B: BRESP changed while BVALID was high and BREADY low");
 
-    a_araddr_stable : assert property (no_change_until_handshake_finishes(ACLK, ARVALID, ARREADY, araddr_stable))
+    a_araddr_stable : assert property (no_change_until_handshake_finishes(ARVALID, ARREADY, araddr_stable))
         else $error("AR: ARADDR changed while ARVALID was high and ARREADY low");
 
-    a_rdata_stable : assert property (no_change_until_handshake_finishes(ACLK, RVALID, RREADY, rdata_stable))
+    a_rdata_stable : assert property (no_change_until_handshake_finishes(RVALID, RREADY, rdata_stable))
         else $error("R: RDATA changed while RVALID was high and RREADY low");
 
-    a_rresp_stable : assert property (no_change_until_handshake_finishes(ACLK, RVALID, RREADY, rresp_stable))
+    a_rresp_stable : assert property (no_change_until_handshake_finishes(RVALID, RREADY, rresp_stable))
         else $error("R: RRESP changed while RVALID was high and RREADY low");
 
-    a_awaddr_known : assert property (no_undefined_while_VALID_active(ACLK, AWVALID, AWADDR))
+    a_awaddr_known : assert property (no_undefined_while_VALID_active(AWVALID, AWADDR))
         else $error("AW: AWADDR contains X/Z while AWVALID is active");
 
-    a_wdata_known : assert property (no_undefined_while_VALID_active(ACLK, WVALID, WDATA))
+    a_wdata_known : assert property (no_undefined_while_VALID_active(WVALID, WDATA))
         else $error("W: WDATA contains X/Z while WVALID is active");
 
-    a_bresp_known : assert property (no_undefined_while_VALID_active(ACLK, BVALID, BRESP))
+    a_bresp_known : assert property (no_undefined_while_VALID_active(BVALID, BRESP))
         else $error("B: BRESP contains X/Z while BVALID is active");
 
-    a_araddr_known : assert property (no_undefined_while_VALID_active(ACLK, ARVALID, ARADDR))
+    a_araddr_known : assert property (no_undefined_while_VALID_active(ARVALID, ARADDR))
         else $error("AR: ARADDR contains X/Z while ARVALID is active");
 
-    a_rdata_known : assert property (no_undefined_while_VALID_active(ACLK, RVALID, RDATA))
+    a_rdata_known : assert property (no_undefined_while_VALID_active(RVALID, RDATA))
         else $error("R: RDATA contains X/Z while RVALID is active");
 
-    a_rresp_known : assert property (no_undefined_while_VALID_active(ACLK, RVALID, RRESP))
+    a_rresp_known : assert property (no_undefined_while_VALID_active(RVALID, RRESP))
         else $error("R: RRESP contains X/Z while RVALID is active");
 
     a_bvalid_bounded : assert property (valid_must_occur_after_addr_data_accepted(
-                           ACLK, (AWVALID && AWREADY && WVALID && WREADY), BVALID, MAX_RESP_CYC))
-        else $error("B: BVALID did not appear within %0d cycles after the write was accepted", MAX_RESP_CYC);
+                           (AWVALID && AWREADY && WVALID && WREADY), BVALID))
+        else $error("B: BVALID did not appear within %0d cycles after the write was accepted",MAX_RESP_CYC);
 
     a_rvalid_bounded : assert property (valid_must_occur_after_addr_data_accepted(
-                           ACLK, (ARVALID && ARREADY), RVALID, MAX_RESP_CYC))
-        else $error("R: RVALID did not appear within %0d cycles after the read address was accepted", MAX_RESP_CYC);
+                           (ARVALID && ARREADY), RVALID))
+        else $error("R: RVALID did not appear within %0d cycles after the read address was accepted",MAX_RESP_CYC);
 
-    a_no_bvalid_without_request : assert property (no_valid_while_low_flag(ACLK, BVALID, wr_pending))
+    a_no_bvalid_without_request : assert property (no_valid_while_low_flag(BVALID, wr_pending))
         else $error("B: BVALID is active with no outstanding write request");
 
-    a_no_rvalid_without_request : assert property (no_valid_while_low_flag(ACLK, RVALID, rd_pending))
+    a_no_rvalid_without_request : assert property (no_valid_while_low_flag(RVALID, rd_pending))
         else $error("R: RVALID is active with no outstanding read request");
 
-    a_reset_awready : assert property (outputs_idle_in_reset(ACLK, ARESETN, AWREADY))
+    a_reset_awready : assert property (outputs_idle_in_reset(ARESETN, AWREADY))
         else $error("RESET: AWREADY is not low during reset");
 
-    a_reset_wready : assert property (outputs_idle_in_reset(ACLK, ARESETN, WREADY))
+    a_reset_wready : assert property (outputs_idle_in_reset(ARESETN, WREADY))
         else $error("RESET: WREADY is not low during reset");
 
-    a_reset_bvalid : assert property (outputs_idle_in_reset(ACLK, ARESETN, BVALID))
+    a_reset_bvalid : assert property (outputs_idle_in_reset(ARESETN, BVALID))
         else $error("RESET: BVALID is not low during reset");
 
-    a_reset_arready : assert property (outputs_idle_in_reset(ACLK, ARESETN, ARREADY))
+    a_reset_arready : assert property (outputs_idle_in_reset(ARESETN, ARREADY))
         else $error("RESET: ARREADY is not low during reset");
 
-    a_reset_rvalid : assert property (outputs_idle_in_reset(ACLK, ARESETN, RVALID))
+    a_reset_rvalid : assert property (outputs_idle_in_reset(ARESETN, RVALID))
         else $error("RESET: RVALID is not low during reset");
 
-    a_bresp_okay : assert property (resp_is_okay_when_valid_is_active(ACLK, BVALID, BRESP))
+    a_bresp_okay : assert property (resp_is_okay_when_valid_is_active(BVALID, BRESP))
         else $error("B: BRESP is %0b, expected OKAY", BRESP);
 
-    a_rresp_okay : assert property (resp_is_okay_when_valid_is_active(ACLK, RVALID, RRESP))
+    a_rresp_okay : assert property (resp_is_okay_when_valid_is_active(RVALID, RRESP))
         else $error("R: RRESP is %0b, expected OKAY", RRESP);
+
 endmodule
 
     bind AXI4Lite_slave AXI4Lite_assertions u_assertions (.*);
