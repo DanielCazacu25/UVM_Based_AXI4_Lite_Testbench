@@ -27,13 +27,13 @@ class AXI4Lite_rd_driver extends uvm_driver #(AXI4Lite_rd_item);
 
         inf.drv_cb.ARADDR <= rd_itm.ARADDR;
         inf.drv_cb.ARVALID <= 1'b1;
-        inf.drv_cb.RREADY <= 1'b1;
 
         @(inf.drv_cb);
         while (!inf.drv_cb.ARREADY)
             @(inf.drv_cb);
 
         inf.drv_cb.ARVALID <= 1'b0;
+        inf.drv_cb.RREADY <= 1'b1;
 
         @(inf.drv_cb);
         while (!inf.drv_cb.RVALID)

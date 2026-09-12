@@ -38,6 +38,7 @@ class AXI4Lite_wr_driver extends uvm_driver #(AXI4Lite_wr_item);
         inf.drv_cb.WVALID <= 1'b0;
         inf.drv_cb.BREADY <= 1'b1;
 
+        @(inf.drv_cb);
         while (!inf.drv_cb.BVALID)
             @(inf.drv_cb);
 

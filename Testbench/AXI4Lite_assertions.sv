@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
 (
 
@@ -28,7 +29,8 @@ module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32
     logic [DATA_WIDTH-1:0] wdata_q,  rdata_q;
     logic [1:0]            bresp_q,  rresp_q;
     localparam [1:0] RESP_OKAY = 2'b00;
-    localparam int MAX_RESP_CYC = 16;
+    localparam ` = 1;
+    localparam MAX_R_RESP_CYC = 2;
 
     always @(posedge ACLK) begin
         awaddr_q <= AWADDR;
@@ -79,16 +81,20 @@ module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32
         VALID |-> !$isunknown(payload);
     endproperty
 
-    property valid_must_occur_after_addr_data_accepted(logic accepted, logic VALID);
+    property rvalid_bounded;
         @(posedge ACLK) disable iff(!ARESETN)
-        accepted |-> ##[0:MAX_RESP_CYC] VALID;
+        (ARVALID && ARREADY) |-> ##[0:MAX_R_RESP_CYC] RVALID;
     endproperty
-    //NOTE: VALID within 1'b1[*N] would also work
+
+    property bvalid_bounded;
+        @(posedge ACLK) disable iff(!ARESETN)
+        (AWVALID && AWREADY && WVALID && WREADY) |-> ##[0:MAX_B_RESP_CYC] BVALID;
+    endproperty
 
     property no_valid_while_low_flag(logic VALID, logic flag);
         @(posedge ACLK) disable iff(!ARESETN)
         VALID |-> flag;
-    endproperty // >okafpo
+    endproperty
 
     property outputs_idle_in_reset(logic RESET, logic flag);
         @(posedge ACLK) !RESET |=> !flag;
@@ -149,14 +155,12 @@ module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32
 
     a_rresp_known : assert property (no_undefined_while_VALID_active(RVALID, RRESP))
         else $error("R: RRESP contains X/Z while RVALID is active");
+        
+    a_bvalid_bounded : assert property (bvalid_bounded)
+        else $error("B: BVALID did not appear within %0d cycles after the write was accepted", MAX_B_RESP_CYC);
 
-    a_bvalid_bounded : assert property (valid_must_occur_after_addr_data_accepted(
-                           (AWVALID && AWREADY && WVALID && WREADY), BVALID))
-        else $error("B: BVALID did not appear within %0d cycles after the write was accepted",MAX_RESP_CYC);
-
-    a_rvalid_bounded : assert property (valid_must_occur_after_addr_data_accepted(
-                           (ARVALID && ARREADY), RVALID))
-        else $error("R: RVALID did not appear within %0d cycles after the read address was accepted",MAX_RESP_CYC);
+    a_rvalid_bounded : assert property (rvalid_bounded)
+        else $error("R: RVALID did not appear within %0d cycles after the read address was accepted", MAX_R_RESP_CYC);
 
     a_no_bvalid_without_request : assert property (no_valid_while_low_flag(BVALID, wr_pending))
         else $error("B: BVALID is active with no outstanding write request");
@@ -188,3 +192,24 @@ module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32
 endmodule
 
     bind AXI4Lite_slave AXI4Lite_assertions u_assertions (.*);
+
+//=========================================
+// Original forms for hardcoded proprieties
+//=========================================
+
+// -> MAX_RESP_CYC is later swaped for MAX_B_RESP_CYC and MAX_R_RESP_CYC <-
+    
+// property valid_must_occur_after_addr_data_accepted(logic accepted, logic VALID);
+//     @(posedge ACLK) disable iff(!ARESETN)
+//     accepted |-> ##[0:MAX_RESP_CYC] VALID;
+// endproperty
+//NOTE: VALID within 1'b1[*MAX_RESP_CYC] would also work
+
+
+// a_bvalid_bounded : assert property (valid_must_occur_after_addr_data_accepted(
+//                        (AWVALID && AWREADY && WVALID && WREADY), BVALID))
+//     else $error("B: BVALID did not appear within %0d cycles after the write was accepted",MAX_RESP_CYC);
+
+// a_rvalid_bounded : assert property (valid_must_occur_after_addr_data_accepted(
+//                        (ARVALID && ARREADY), RVALID))
+//     else $error("R: RVALID did not appear within %0d cycles after the read address was accepted",MAX_RESP_CYC);
