@@ -25,6 +25,10 @@ class AXI4Lite_virtual_sequence extends uvm_sequence;
         rd_seq = AXI4Lite_rd_seq :: type_id :: create("rd_seq");
 
         irq_seq = irq_sequence :: type_id :: create("irq_seq");
+
+        wr_seq.addr_lock = p_sequencer.addr_lock;
+
+        rd_seq.addr_lock = p_sequencer.addr_lock;
       
     endtask
 

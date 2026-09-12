@@ -29,7 +29,7 @@ module AXI4Lite_assertions #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32
     logic [DATA_WIDTH-1:0] wdata_q,  rdata_q;
     logic [1:0]            bresp_q,  rresp_q;
     localparam [1:0] RESP_OKAY = 2'b00;
-    localparam ` = 1;
+    localparam MAX_B_RESP_CYC = 1;
     localparam MAX_R_RESP_CYC = 2;
 
     always @(posedge ACLK) begin
