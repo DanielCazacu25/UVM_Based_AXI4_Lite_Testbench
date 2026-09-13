@@ -4,6 +4,7 @@ import uvm_pkg::*;
 `uvm_analysis_imp_decl(_wr)
 `uvm_analysis_imp_decl(_rd)
 `uvm_analysis_imp_decl(_irq)
+`uvm_analysis_imp_decl(_addr)
 
 class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32) extends uvm_scoreboard;
 
@@ -12,6 +13,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
 
     logic [DATA_WIDTH-1:0] expected_regs [bit [ADDR_WIDTH-1:0]];
     logic irq_ref_model;
+    logic irq_ref_copy;
     logic irq_copy;
     int pass_count, fail_count;
     localparam CTRL_ADDR       = 4'h0;
@@ -24,6 +26,8 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
     uvm_analysis_imp_rd #(AXI4Lite_rd_item, this_sb) rd_imp;
 
     uvm_analysis_imp_irq #(irq_seq_item, this_sb) irq_imp;
+
+    uvm_analysis_imp_addr #(AXI4Lite_rd_item, this_sb) addr_imp;
 
     function new(string name = "AXI4Lite_scoreboard",uvm_component parent);
 
@@ -38,12 +42,30 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
         pass_count = 0;
         fail_count = 0;
         irq_ref_model = 0;
+        irq_ref_copy  = 0;
         irq_copy = 0;
+
+        // Valorile de reset ale DUT-ului. Fara ele, o citire care ajunge
+        // inaintea primei scrieri gaseste 'x in array-ul asociativ, iar
+        // comparatia cu !== ar raporta o eroare falsa.
+        expected_regs[CTRL_ADDR] = '0;
+        expected_regs[DATA_ADDR] = '0;
 
         wr_imp = new("wr_imp",this);
         rd_imp = new("rd_imp",this);
         irq_imp = new("irq_imp",this);
+        addr_imp = new("addr_imp",this);
         
+    endfunction
+
+    function void write_addr(AXI4Lite_rd_item itm);
+
+        if(itm.ARADDR == IRQ_STATUS_ADDR) begin
+            
+           irq_ref_copy = irq_ref_model;
+
+        end
+      
     endfunction
 
     function void write_irq(irq_seq_item itm);
@@ -72,53 +94,67 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
     endfunction
 
     function void write_rd(AXI4Lite_rd_item rd_itm);
-        
+
+        logic [DATA_WIDTH-1:0] exp;
+
         case (rd_itm.ARADDR)
+
         CTRL_ADDR : begin
-        if(rd_itm.RDATA != {{(DATA_WIDTH - 3){1'b0}},expected_regs[rd_itm.ARADDR]})begin
-                `uvm_error(get_type_name(),$sformatf("Error - CTRL_ADDR"));
+            exp = expected_regs[CTRL_ADDR];
+            if(rd_itm.RDATA !== exp) begin
+                `uvm_error(get_type_name(), $sformatf(
+                    "CTRL_REG: read mismatch - expected 0x%0h, got 0x%0h | enable exp/got = %0b/%0b, mode exp/got = %0b/%0b | prediction comes from the last write to CTRL_REG",
+                    exp, rd_itm.RDATA,
+                    exp[0], rd_itm.RDATA[0],
+                    exp[2:1], rd_itm.RDATA[2:1]))
                 fail_count++;
             end
-            else begin
-                pass_count++;
-            end
-        end  
+            else pass_count++;
+        end
+
         DATA_ADDR : begin
-            if(rd_itm.RDATA != expected_regs[rd_itm.ARADDR])begin
-                `uvm_error(get_type_name(),$sformatf("Error - DATA_ADDR"));
+            exp = expected_regs[DATA_ADDR];
+            if(rd_itm.RDATA !== exp) begin
+                `uvm_error(get_type_name(), $sformatf(
+                    "DATA_REG: read mismatch - expected 0x%08h, got 0x%08h | prediction comes from the last write to DATA_REG",
+                    exp, rd_itm.RDATA))
                 fail_count++;
             end
-            else begin
-                pass_count++;
-            end
-        end  
+            else pass_count++;
+        end
+
         STATUS_ADDR : begin
             if($isunknown(rd_itm.RDATA)) begin
-                `uvm_error(get_type_name(),$sformatf("Error - STATUS_ADDR"));
+                `uvm_error(get_type_name(), $sformatf(
+                    "STATUS_REG: RDATA contains X/Z - got 0x%08h | the busy bit is not modelled, only definedness is checked here",
+                    rd_itm.RDATA))
                 fail_count++;
             end
-            else begin
-                pass_count++;
-            end
-        end 
-        IRQ_STATUS_ADDR : begin
-            if(rd_itm.RDATA != {{(DATA_WIDTH -1){1'b0}},irq_ref_model}) begin
-                `uvm_error(get_type_name(),$sformatf("Error - IRQ_STATUS_ADDR"))
-                fail_count++;
-            end
-            else begin
-                pass_count++;
-            end
-        end 
-        default : begin
-            if(rd_itm.RDATA != 0) begin
-                `uvm_error(get_type_name(),$sformatf("Error - Incorrect DATA for invalid ADDR(expected RDATA = 0)"));
-                fail_count++;
-            end
-            else begin
-                pass_count++;
-            end
+            else pass_count++;
         end
+
+        IRQ_STATUS_ADDR : begin
+            exp = {{(DATA_WIDTH-1){1'b0}}, irq_ref_copy};
+            if(rd_itm.RDATA !== exp) begin
+                `uvm_error(get_type_name(), $sformatf(
+                    "IRQ_STATUS_REG: read mismatch - expected 0x%0h, got 0x%0h | prediction is the snapshot taken at the read address handshake",
+                    exp, rd_itm.RDATA))
+                fail_count++;
+            end
+            else pass_count++;
+        end
+
+        default : begin
+            exp = '0;
+            if(rd_itm.RDATA !== exp) begin
+                `uvm_error(get_type_name(), $sformatf(
+                    "Unmapped ADDR 0x%0h: spec requires RDATA = 0 - expected 0x%08h, got 0x%08h",
+                    rd_itm.ARADDR, exp, rd_itm.RDATA))
+                fail_count++;
+            end
+            else pass_count++;
+        end
+
         endcase
     endfunction
 

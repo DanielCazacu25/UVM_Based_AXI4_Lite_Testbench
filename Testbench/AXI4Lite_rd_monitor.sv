@@ -7,6 +7,8 @@ class AXI4Lite_rd_monitor extends uvm_monitor;
 
     uvm_analysis_port#(AXI4Lite_rd_item) mon_rd;
 
+    uvm_analysis_port#(AXI4Lite_rd_item) addr_port;
+
     virtual AXI4Lite_inf.MONITOR_AXI4Lite inf;
 
     function new(string name = "AXI4Lite_rd_monitor", uvm_component parent);
@@ -21,6 +23,8 @@ class AXI4Lite_rd_monitor extends uvm_monitor;
 
         mon_rd = new("mon_rd",this);
 
+        addr_port = new("addr_port",this);
+
         if(!uvm_config_db#(virtual AXI4Lite_inf.MONITOR_AXI4Lite) :: get(this,"","inf",inf))
             `uvm_fatal("NOINF","Interface not found")
         
@@ -30,9 +34,13 @@ class AXI4Lite_rd_monitor extends uvm_monitor;
 
     AXI4Lite_rd_item rd_itm;
 
+    AXI4Lite_rd_item addr_itm;
+
     forever begin
 
         rd_itm = AXI4Lite_rd_item::type_id::create("rd_itm",this);
+
+        addr_itm = AXI4Lite_rd_item::type_id::create("addr_itm",this);
 
         @(inf.mon_cb);
 
@@ -40,6 +48,10 @@ class AXI4Lite_rd_monitor extends uvm_monitor;
             @(inf.mon_cb);
 
         rd_itm.ARADDR = inf.mon_cb.ARADDR;
+
+        addr_itm.ARADDR = inf.mon_cb.ARADDR;
+
+        addr_port.write(addr_itm);
 
         @(inf.mon_cb);
 

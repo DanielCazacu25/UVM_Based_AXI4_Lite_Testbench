@@ -47,6 +47,8 @@ class AXI4Lite_env extends uvm_env;
 
         irq_agn.mon.irq_ap.connect(scorb.irq_imp);
 
+        rd_agn.rd_mon.addr_port.connect(scorb.addr_imp);
+
         virt_seqr.wr_seqr = wr_agn.wr_seqr;
 
         virt_seqr.rd_seqr = rd_agn.rd_seqr;
