@@ -15,6 +15,10 @@ class AXI4Lite_env extends uvm_env;
 
     AXI4Lite_virtual_sequencer virt_seqr;
 
+    AXI4Lite_wr_coverage wr_cov;
+
+    AXI4Lite_rd_coverage rd_cov;
+
     function new(string name = "AXI4Lite_env", uvm_component parent);
 
         super.new(name,parent);
@@ -35,6 +39,10 @@ class AXI4Lite_env extends uvm_env;
 
         virt_seqr = AXI4Lite_virtual_sequencer :: type_id :: create("virt_seqr",this);
 
+        wr_cov = AXI4Lite_wr_coverage :: type_id :: create("wr_cov",this);
+
+        rd_cov = AXI4Lite_rd_coverage :: type_id :: create("rd_cov",this);
+
     endfunction
 
     function void connect_phase(uvm_phase phase);
@@ -45,9 +53,13 @@ class AXI4Lite_env extends uvm_env;
 
         rd_agn.rd_mon.mon_rd.connect(scorb.rd_imp);
 
-        irq_agn.mon.irq_ap.connect(scorb.irq_imp);
-
         rd_agn.rd_mon.addr_port.connect(scorb.addr_imp);
+
+        wr_agn.wr_mon.mon_wr.connect(wr_cov.analysis_export);
+
+        rd_agn.rd_mon.mon_rd.connect(rd_cov.analysis_export);
+
+        irq_agn.mon.irq_ap.connect(scorb.irq_imp);
 
         virt_seqr.wr_seqr = wr_agn.wr_seqr;
 

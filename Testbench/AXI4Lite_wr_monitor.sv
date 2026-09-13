@@ -38,6 +38,7 @@ class AXI4Lite_wr_monitor extends uvm_monitor;
 
             wr_itm.AWADDR = inf.mon_cb.AWADDR;
             wr_itm.WDATA  = inf.mon_cb.WDATA;
+            wr_itm.irq_set_i = inf.mon_cb.irq_set_i;
 
             @(inf.mon_cb);
             while(!(inf.mon_cb.BVALID && inf.mon_cb.BREADY))

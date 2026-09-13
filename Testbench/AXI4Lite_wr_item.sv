@@ -7,6 +7,7 @@ class AXI4Lite_wr_item #(parameter DATA_WIDTH = 32, parameter ADDR_WIDTH = 4) ex
     rand logic [DATA_WIDTH-1:0] WDATA;
 
     logic [1:0] BRESP;
+    logic irq_set_i;
 
     typedef AXI4Lite_wr_item #(DATA_WIDTH, ADDR_WIDTH) axi_wr_itm;
     `uvm_object_param_utils(axi_wr_itm)

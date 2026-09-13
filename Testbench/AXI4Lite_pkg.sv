@@ -24,6 +24,8 @@ package AXI4Lite_pkg;
     `include "AXI4Lite_rd_agent.sv"
     `include "irq_agent.sv"
     `include "AXI4Lite_scoreboard.sv"
+    `include "AXI4Lite_rd_coverage.sv"
+    `include "AXI4Lite_wr_coverage.sv"
     `include "AXI4Lite_env.sv"
     `include "AXI4Lite_test.sv"
 
