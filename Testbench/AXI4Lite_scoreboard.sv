@@ -130,6 +130,12 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
                     rd_itm.RDATA))
                 fail_count++;
             end
+            else if(rd_itm.RDATA[DATA_WIDTH - 1:1] !== '0) begin
+                `uvm_error(get_type_name(), $sformatf(
+                    "STATUS_REG: RDATA mismatch - expected 31*(0), got 0x%0h | reserved bits [31:1] must be 0",
+                    rd_itm.RDATA[DATA_WIDTH - 1:1]))
+                fail_count++;
+            end
             else pass_count++;
         end
 
