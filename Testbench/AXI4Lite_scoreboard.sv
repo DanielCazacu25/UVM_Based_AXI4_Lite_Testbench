@@ -5,6 +5,7 @@ import uvm_pkg::*;
 `uvm_analysis_imp_decl(_rd)
 `uvm_analysis_imp_decl(_irq)
 `uvm_analysis_imp_decl(_addr)
+`uvm_analysis_imp_decl(_cmd)
 
 class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32) extends uvm_scoreboard;
 
@@ -12,9 +13,11 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
     `uvm_component_utils(this_sb)
 
     logic [DATA_WIDTH-1:0] expected_regs [bit [ADDR_WIDTH-1:0]];
-    logic irq_ref_model;
+    logic irq_next;
+    bit irq_flag;
+    logic irq_current;
     logic irq_ref_copy;
-    logic irq_copy;
+    time last_time;
     int pass_count, fail_count;
     localparam CTRL_ADDR       = 4'h0;
     localparam STATUS_ADDR     = 4'h4;
@@ -29,6 +32,8 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
 
     uvm_analysis_imp_addr #(AXI4Lite_rd_item, this_sb) addr_imp;
 
+    uvm_analysis_imp_cmd #(AXI4Lite_wr_item, this_sb) cmd_imp;
+
     function new(string name = "AXI4Lite_scoreboard",uvm_component parent);
 
         super.new(name,parent);
@@ -41,13 +46,11 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
 
         pass_count = 0;
         fail_count = 0;
-        irq_ref_model = 0;
-        irq_ref_copy  = 0;
-        irq_copy = 0;
-
-        // Valorile de reset ale DUT-ului. Fara ele, o citire care ajunge
-        // inaintea primei scrieri gaseste 'x in array-ul asociativ, iar
-        // comparatia cu !== ar raporta o eroare falsa.
+        irq_next = 0;
+        irq_flag = 0;
+        irq_ref_copy = 0;
+        irq_current = 0;
+        last_time = 0;
         expected_regs[CTRL_ADDR] = '0;
         expected_regs[DATA_ADDR] = '0;
 
@@ -55,27 +58,61 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
         rd_imp = new("rd_imp",this);
         irq_imp = new("irq_imp",this);
         addr_imp = new("addr_imp",this);
+        cmd_imp = new("cmd_imp",this);
         
     endfunction
 
+    local function void advance();
+
+        if(last_time != $time) begin
+            
+            irq_current = irq_next;
+            irq_flag = 0;
+            last_time = $time;
+
+        end
+    endfunction
+
+    function void write_cmd(AXI4Lite_wr_item wr_itm);
+
+        advance();
+
+        if(wr_itm.AWADDR != IRQ_STATUS_ADDR)
+            return;
+        if(!wr_itm.WDATA[0])
+            return;
+        if(irq_flag)
+            return;
+        
+        irq_next = 0;
+
+    endfunction
+
+
     function void write_addr(AXI4Lite_rd_item itm);
 
+        advance();
+
         if(itm.ARADDR == IRQ_STATUS_ADDR) begin
-            
-           irq_ref_copy = irq_ref_model;
+
+            irq_ref_copy = irq_current;
 
         end
       
     endfunction
 
     function void write_irq(irq_seq_item itm);
-        
-        if(itm.irq_set_i)
 
-            irq_ref_model = 1'b1;
-
-        irq_copy = itm.irq_set_i;
+        advance();
         
+        if(itm.irq_set_i) begin
+            
+            irq_next = 1;
+            irq_flag = 1;
+
+        end
+
+
     endfunction
 
     function void write_wr(AXI4Lite_wr_item wr_itm);
@@ -84,10 +121,7 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
             CTRL_ADDR : expected_regs[wr_itm.AWADDR] = {{(DATA_WIDTH-3){1'b0}},wr_itm.WDATA[2:0]};
             DATA_ADDR : expected_regs[wr_itm.AWADDR] = wr_itm.WDATA;
             STATUS_ADDR : ;
-            IRQ_STATUS_ADDR : begin
-                if(!irq_copy && wr_itm.WDATA[0])
-                    irq_ref_model = 1'b0;
-            end 
+            IRQ_STATUS_ADDR : ;
             default : ;
         endcase
         

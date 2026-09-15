@@ -12,5 +12,13 @@ class irq_seq_item extends uvm_sequence_item;
         super.new(name);
 
     endfunction
+
+    constraint irq_dist {
+
+        irq_set_i dist{
+            1'b1 := 4,
+            1'b0 := 96
+        };
+    }
     
 endclass

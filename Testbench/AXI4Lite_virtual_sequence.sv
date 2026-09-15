@@ -35,14 +35,21 @@ class AXI4Lite_virtual_sequence extends uvm_sequence;
     task body();
 
         fork
-            
-            wr_seq.start(p_sequencer.wr_seqr);
 
-            rd_seq.start(p_sequencer.rd_seqr);
+                        
+            fork
+                
+                wr_seq.start(p_sequencer.wr_seqr);
 
+                rd_seq.start(p_sequencer.rd_seqr);
+
+            join
+                
             irq_seq.start(p_sequencer.irq_seqr);
 
-        join
+        join_any
+
+        disable fork;
       
     endtask
     

@@ -7,6 +7,8 @@ class AXI4Lite_wr_monitor extends uvm_monitor;
 
     uvm_analysis_port#(AXI4Lite_wr_item) mon_wr;
 
+    uvm_analysis_port#(AXI4Lite_wr_item) cmd_wr;
+
     virtual AXI4Lite_inf.MONITOR_AXI4Lite inf;
 
     function new(string name = "AXI4Lite_wr_monitor", uvm_component parent);
@@ -18,6 +20,8 @@ class AXI4Lite_wr_monitor extends uvm_monitor;
 
         mon_wr = new("mon_wr",this);
 
+        cmd_wr = new("cmd_wr",this);
+
         if(!uvm_config_db#(virtual AXI4Lite_inf.MONITOR_AXI4Lite) :: get(this,"","inf",inf))
             `uvm_fatal("NOINF","Interface not found")
         
@@ -27,9 +31,13 @@ class AXI4Lite_wr_monitor extends uvm_monitor;
 
         AXI4Lite_wr_item wr_itm;
 
+        AXI4Lite_wr_item cmd_itm;
+
         forever begin
 
             wr_itm = AXI4Lite_wr_item::type_id::create("wr_itm",this);
+
+            cmd_itm = AXI4Lite_wr_item::type_id::create("cmd_itm",this);
 
             @(inf.mon_cb);
 
@@ -39,6 +47,11 @@ class AXI4Lite_wr_monitor extends uvm_monitor;
             wr_itm.AWADDR = inf.mon_cb.AWADDR;
             wr_itm.WDATA  = inf.mon_cb.WDATA;
             wr_itm.irq_set_i = inf.mon_cb.irq_set_i;
+
+            cmd_itm.AWADDR = inf.mon_cb.AWADDR;
+            cmd_itm.WDATA = inf.mon_cb.WDATA;
+
+            cmd_wr.write(cmd_itm);
 
             @(inf.mon_cb);
             while(!(inf.mon_cb.BVALID && inf.mon_cb.BREADY))
