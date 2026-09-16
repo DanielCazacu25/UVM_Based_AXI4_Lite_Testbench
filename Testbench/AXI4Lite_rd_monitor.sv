@@ -69,4 +69,16 @@ class AXI4Lite_rd_monitor extends uvm_monitor;
 
 endtask
 
+    function void end_of_elaboration_phase(uvm_phase phase);
+
+        super.end_of_elaboration_phase(phase);
+
+        if (addr_port.size() == 0)
+            `uvm_fatal(get_type_name(), "addr_port has no subscribers - the IRQ_STATUS snapshot is never taken, every read compares against the initial value")
+
+        if(mon_rd.size() == 0)
+            `uvm_fatal(get_type_name(), "mon_rd has no subscribers - read operations will not reach the scoreboard")
+
+    endfunction
+
 endclass

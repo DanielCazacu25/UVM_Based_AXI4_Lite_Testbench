@@ -67,4 +67,16 @@ class AXI4Lite_wr_monitor extends uvm_monitor;
 
     endtask
 
+    function void end_of_elaboration_phase(uvm_phase phase);
+
+        super.end_of_elaboration_phase(phase);
+
+        if (cmd_wr.size() == 0)
+            `uvm_fatal(get_type_name(), "cmd_wr has no subscribers - the W1C clear will never reach the scoreboard")
+
+        if(mon_wr.size() == 0)
+            `uvm_fatal(get_type_name(), "mon_wr has no subscribers - write operations will not reach the scoreboard")
+
+    endfunction
+
 endclass

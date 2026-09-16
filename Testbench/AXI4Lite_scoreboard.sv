@@ -77,6 +77,8 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
 
         advance();
 
+        `uvm_info(get_type_name(),$sformatf("BEFORE irq_next = 0 : time : %0t | AWADDR : %0d | WDATA[0] : %0d | irq_flag : %0d",$time,wr_itm.AWADDR,wr_itm.WDATA[0],irq_flag),UVM_HIGH)
+
         if(wr_itm.AWADDR != IRQ_STATUS_ADDR)
             return;
         if(!wr_itm.WDATA[0])
@@ -85,6 +87,8 @@ class AXI4Lite_scoreboard #(parameter ADDR_WIDTH = 4, parameter DATA_WIDTH = 32)
             return;
         
         irq_next = 0;
+
+        `uvm_info(get_type_name(),$sformatf("AFTER irq_next = 0 : time : %0t | AWADDR : %0d | WDATA[0] : %0d | irq_flag : %0d",$time,wr_itm.AWADDR,wr_itm.WDATA[0],irq_flag),UVM_HIGH)
 
     endfunction
 
