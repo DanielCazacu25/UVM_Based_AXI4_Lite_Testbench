@@ -51,6 +51,8 @@ class AXI4Lite_env extends uvm_env;
 
         wr_agn.wr_mon.mon_wr.connect(scorb.wr_imp);
 
+        wr_agn.wr_mon.cmd_wr.connect(scorb.cmd_imp);
+
         rd_agn.rd_mon.mon_rd.connect(scorb.rd_imp);
 
         rd_agn.rd_mon.addr_port.connect(scorb.addr_imp);
