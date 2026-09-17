@@ -19,6 +19,24 @@ class AXI4Lite_env extends uvm_env;
 
     AXI4Lite_rd_coverage rd_cov;
 
+    AXI4Lite_reg_block reg_block;
+
+    AXI4Lite_wr_adapter wr_adapter;
+
+    AXI4Lite_rd_adapter rd_adapter;
+
+    AXI4Lite_frontdoor fd_ctrl;
+
+    AXI4Lite_frontdoor fd_status;
+
+    AXI4Lite_frontdoor fd_data;
+
+    AXI4Lite_frontdoor fd_irq;
+
+    uvm_reg_predictor #(AXI4Lite_wr_item) wr_predictor;
+
+    uvm_reg_predictor #(AXI4Lite_rd_item) rd_predictor;
+
     function new(string name = "AXI4Lite_env", uvm_component parent);
 
         super.new(name,parent);
@@ -42,6 +60,26 @@ class AXI4Lite_env extends uvm_env;
         wr_cov = AXI4Lite_wr_coverage :: type_id :: create("wr_cov",this);
 
         rd_cov = AXI4Lite_rd_coverage :: type_id :: create("rd_cov",this);
+
+        reg_block = AXI4Lite_reg_block :: type_id :: create("reg_block");
+        reg_block.build();
+        uvm_config_db #(AXI4Lite_reg_block) :: set(this, "*", "reg_block", reg_block);
+
+        wr_adapter = AXI4Lite_wr_adapter :: type_id :: create("wr_adapter");
+
+        rd_adapter = AXI4Lite_rd_adapter :: type_id :: create("rd_adapter");
+
+        fd_ctrl = AXI4Lite_frontdoor :: type_id :: create("fd_ctrl");
+
+        fd_status = AXI4Lite_frontdoor :: type_id :: create("fd_status");
+
+        fd_data = AXI4Lite_frontdoor :: type_id :: create("fd_data");
+
+        fd_irq = AXI4Lite_frontdoor :: type_id :: create("fd_irq");
+
+        wr_predictor = uvm_reg_predictor#(AXI4Lite_wr_item) :: type_id :: create("wr_predictor",this);
+
+        rd_predictor = uvm_reg_predictor#(AXI4Lite_rd_item) :: type_id :: create("rd_predictor",this);
 
     endfunction
 
@@ -68,6 +106,26 @@ class AXI4Lite_env extends uvm_env;
         virt_seqr.rd_seqr = rd_agn.rd_seqr;
 
         virt_seqr.irq_seqr = irq_agn.seqr;
+
+        reg_block.axi_map.set_sequencer(virt_seqr, null);
+
+        wr_predictor.map = reg_block.axi_map;
+        wr_predictor.adapter = wr_adapter;
+
+        rd_predictor.map = reg_block.axi_map;
+        rd_predictor.adapter = rd_adapter;
+
+        wr_agn.wr_mon.mon_wr.connect(wr_predictor.bus_in);
+
+        rd_agn.rd_mon.mon_rd.connect(rd_predictor.bus_in);
+
+        reg_block.ctrl.set_frontdoor(fd_ctrl, reg_block.axi_map);
+
+        reg_block.status.set_frontdoor(fd_status, reg_block.axi_map);
+
+        reg_block.data.set_frontdoor(fd_data, reg_block.axi_map);
+
+        reg_block.irq.set_frontdoor(fd_irq, reg_block.axi_map);
 
     endfunction
     

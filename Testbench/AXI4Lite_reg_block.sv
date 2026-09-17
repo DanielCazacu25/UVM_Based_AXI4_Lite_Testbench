@@ -24,7 +24,7 @@ class AXI4Lite_reg_block extends uvm_reg_block;
         ctrl = AXI4Lite_ctrl_reg :: type_id :: create("ctrl");
         ctrl.configure(this,null,"");
         ctrl.build();
-    axi_map.add_reg(ctrl, 'h0, "RW");
+        axi_map.add_reg(ctrl, 'h0, "RW");
 
         status = AXI4Lite_status_reg :: type_id :: create("status");
         status.configure(this,null,"");
