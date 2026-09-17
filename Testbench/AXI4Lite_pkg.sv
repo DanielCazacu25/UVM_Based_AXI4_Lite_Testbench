@@ -3,6 +3,8 @@ package AXI4Lite_pkg;
     import uvm_pkg::*;
     `include "uvm_macros.svh"
 
+    typedef enum bit [1:0] {RESP_OKAY, EXOKAY, SLVERR, DECERR} axi_resp_e;
+
     `include "AXI4Lite_wr_item.sv"
     `include "AXI4Lite_rd_item.sv"
     `include "irq_seq_item.sv"
