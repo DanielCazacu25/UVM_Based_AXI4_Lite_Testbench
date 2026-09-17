@@ -4,6 +4,8 @@ package AXI4Lite_pkg;
     `include "uvm_macros.svh"
 
     typedef enum bit [1:0] {RESP_OKAY, EXOKAY, SLVERR, DECERR} axi_resp_e;
+    localparam DATA_WIDTH = 32;
+    localparam ADDR_WIDTH = 4;
 
     `include "AXI4Lite_wr_item.sv"
     `include "AXI4Lite_rd_item.sv"
