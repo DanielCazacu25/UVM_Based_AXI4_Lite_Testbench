@@ -4,10 +4,10 @@ import uvm_pkg::*;
 class AXI4Lite_wr_coverage #(parameter DATA_WIDTH = 32, parameter ADDR_WIDTH = 4)
     extends uvm_subscriber #(AXI4Lite_wr_item #(DATA_WIDTH, ADDR_WIDTH));
 
-    typedef AXI4Lite_wr_coverage #(DATA_WIDTH, ADDR_WIDTH) this_cov;
+    typedef AXI4Lite_wr_coverage #(DATA_WIDTH, ADDR_WIDTH) wr_cov;
     typedef AXI4Lite_wr_item     #(DATA_WIDTH, ADDR_WIDTH) wr_item_t;
 
-    `uvm_component_utils(this_cov)
+    `uvm_component_utils(wr_cov)
 
     localparam bit [ADDR_WIDTH-1:0] CTRL_ADDR       = 4'h0;
     localparam bit [ADDR_WIDTH-1:0] STATUS_ADDR     = 4'h4;

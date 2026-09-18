@@ -18,19 +18,20 @@ class AXI4Lite_ral_seq extends uvm_sequence;
     function new(string name = "AXI4Lite_ral_seq");
 
         super.new(name);
-        
+
     endfunction
 
     virtual task body();
 
         if(!uvm_config_db#(AXI4Lite_reg_block)::get(m_sequencer, "", "reg_block", reg_block)) begin
-            
+
             `uvm_fatal(get_type_name(),"ERROR : reg_block not found")
         end
 
         reg_block.reset();
 
         uvm_resource_db#(bit)::set({"REG::", reg_block.irq.get_full_name()}, "NO_REG_BIT_BASH_TEST", 1, this);
+        `uvm_info(get_type_name(), "IRQ_STATUS excluded from bit-bash (volatile W1C bit, set by hardware)", UVM_LOW)
 
         //bit bash test automaticly changes every bit in the register but irq has W1C policy which means it can change automaticly(by the DUT) during testing
         //it's already tested by default UVM classes
@@ -62,6 +63,7 @@ class AXI4Lite_ral_seq extends uvm_sequence;
         if(status != UVM_IS_OK)
             `uvm_error(get_type_name(),"ERROR while reading from DATA_REG")
         reg_block.irq.read(status,rdata);
+        `uvm_info(get_type_name(), $sformatf("IRQ_STATUS read back = 0x%0h (expected 0x0)", rdata), UVM_LOW)
         if(rdata[0] != 1'b0)
             `uvm_error(get_type_name(),"ERROR while reading from IRQ_STATUS_REG")
 
@@ -70,6 +72,7 @@ class AXI4Lite_ral_seq extends uvm_sequence;
         if(status != UVM_IS_OK)
             `uvm_error(get_type_name(),"ERROR bits 31-3 should be RO")
 
+        `uvm_info(get_type_name(), "  6a: hardware pulse on irq_set_i", UVM_LOW)
         irq_set_itm = irq_seq_item :: type_id :: create("irq_set_itm");
         start_item(irq_set_itm, -1, p_sequencer.irq_seqr);
         irq_set_itm.irq_set_i = 1;
@@ -81,19 +84,26 @@ class AXI4Lite_ral_seq extends uvm_sequence;
         finish_item(irq_clear_itm);
 
         reg_block.irq.read(status,rdata);
+        `uvm_info(get_type_name(), $sformatf("  6a: after hardware pulse IRQ_STATUS = 0x%0h (expected 0x1)", rdata), UVM_LOW)
         if(rdata[0] != 1'b1)
             `uvm_error(get_type_name(),"ERROR the pulse did not reach the DUT")
 
+        `uvm_info(get_type_name(), "  6b: writing 0 must NOT clear", UVM_LOW)
         reg_block.irq.write(status, 1'b0);
         reg_block.irq.read(status,rdata);
+        `uvm_info(get_type_name(), $sformatf("  6b: after write 0 IRQ_STATUS = 0x%0h (expected 0x1)", rdata), UVM_LOW)
         if(rdata[0] != 1'b1)
             `uvm_error(get_type_name(),"ERROR W1C: only write 1 clears")
 
+        `uvm_info(get_type_name(), "  6c: writing 1 must clear", UVM_LOW)
         reg_block.irq.write(status, 1'b1);
         reg_block.irq.read(status,rdata);
+        `uvm_info(get_type_name(), $sformatf("  6c: after write 1 IRQ_STATUS = 0x%0h (expected 0x0)", rdata), UVM_LOW)
         if(rdata[0] != 1'b0)
             `uvm_error(get_type_name(),"ERROR W1C: write 1 clears")
-      
+
+        `uvm_info(get_type_name(), "=== RAL sequence DONE ===", UVM_LOW)
+
     endtask
 
 endclass

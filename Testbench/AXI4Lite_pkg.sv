@@ -4,8 +4,8 @@ package AXI4Lite_pkg;
     `include "uvm_macros.svh"
 
     typedef enum bit [1:0] {RESP_OKAY, EXOKAY, SLVERR, DECERR} axi_resp_e;
-    localparam DATA_WIDTH = 32;
-    localparam ADDR_WIDTH = 4;
+    parameter DATA_WIDTH = 32;
+    parameter ADDR_WIDTH = 4;
 
     `include "AXI4Lite_wr_item.sv"
     `include "AXI4Lite_rd_item.sv"
@@ -30,7 +30,17 @@ package AXI4Lite_pkg;
     `include "AXI4Lite_scoreboard.sv"
     `include "AXI4Lite_rd_coverage.sv"
     `include "AXI4Lite_wr_coverage.sv"
+    `include "AXI4Lite_ctrl_reg.sv"
+    `include "AXI4Lite_status_reg.sv"
+    `include "AXI4Lite_data_reg.sv"
+    `include "AXI4Lite_irq_status_reg.sv"
+    `include "AXI4Lite_reg_block.sv"
+    `include "AXI4Lite_wr_adapter.sv"
+    `include "AXI4Lite_rd_adapter.sv"
+    `include "AXI4Lite_frontdoor.sv"
+    `include "AXI4Lite_ral_seq.sv"
     `include "AXI4Lite_env.sv"
     `include "AXI4Lite_test.sv"
+    `include "AXI4Lite_ral_test.sv"
 
 endpackage

@@ -42,6 +42,7 @@ module AXI4Lite_top;
         uvm_config_db#(virtual AXI4Lite_inf.DRIVER_AXI4Lite) :: set(null,"*","inf",inf);
         uvm_config_db#(virtual AXI4Lite_inf.MONITOR_AXI4Lite) :: set(null,"*","inf",inf);
         uvm_config_db#(virtual AXI4Lite_inf.IRQ_DRIVER_AXI4Lite) :: set(null,"uvm_test_top.env.irq_agn.drv","inf",inf);
+        uvm_config_db#(virtual AXI4Lite_inf) :: set(null,"*","inf",inf);
         run_test();
     
     end

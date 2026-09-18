@@ -28,6 +28,8 @@ class AXI4Lite_rd_adapter extends uvm_reg_adapter;
 
     virtual function uvm_sequence_item reg2bus(const ref uvm_reg_bus_op rw);
 
+        AXI4Lite_rd_item rd_itm;
+
         `uvm_fatal(get_type_name(),"ERROR : reg2bus should not be called")
 
         return rd_itm;
