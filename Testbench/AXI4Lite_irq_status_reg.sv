@@ -21,7 +21,7 @@ class AXI4Lite_irq_status_reg extends uvm_reg;
         reserved = uvm_reg_field :: type_id :: create("reserved");
 
         irq.configure(this, 1, 0, "W1C", 1'b1, 'h0, 1'b1, 1'b1, 1'b0);
-        reserved.configure(this, 30, 1, "RO", 1'b0, 'h0, 1'b1, 1'b0, 1'b0);
+        reserved.configure(this, 31, 1, "RO", 1'b0, 'h0, 1'b1, 1'b0, 1'b0);
       
     endfunction
 endclass
