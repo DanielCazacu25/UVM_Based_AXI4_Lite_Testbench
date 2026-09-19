@@ -9,6 +9,7 @@ project_1/
 *.gen/
 .Xil/
 xsim.dir/
+logs/
 *.jou
 *.log
 *.str
