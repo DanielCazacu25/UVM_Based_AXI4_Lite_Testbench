@@ -249,6 +249,81 @@ The assertion layer was validated the same way in the earlier phase of the proje
 7. Type `run -all` in the Tcl console so the simulation runs until UVM itself calls `$finish`.
 8. Check the Tcl console for the scoreboard summary, the coverage percentages, and the UVM report summary (`UVM_ERROR` / `UVM_FATAL` counts).
 
+## Regression script
+
+`scripts/script.py` runs both tests (`AXI4Lite_test` and `AXI4Lite_ral_test`) on N random seeds from the command line, without opening the Vivado GUI, and writes a pass/fail summary plus a log of every failure.
+
+### Requirements
+
+- Windows (the script calls `settings64.bat` through `cmd`)
+- Vivado with the Vivado Simulator (`xsim`); tested with 2025.2
+- Python 3 (standard library only, nothing to install)
+- The behavioral simulation must have been run **once from Vivado** (see _How to run_). That step compiles and elaborates the design into the snapshot `AXI4Lite_top_behav`, which the script then re-runs. Both tests live in the same snapshot, so switching tests or seeds needs no recompilation.
+  > After editing any `.sv` / `.v` file, run the simulation from Vivado once more. Otherwise the script keeps running the old snapshot.
+
+### Finding the two paths
+
+| Argument     | What it points to                                                     | Where to find it                                       |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------ |
+| `--folder`   | The folder that holds the compiled snapshot (it contains `xsim.dir/`) | `<project>/<project>.sim/sim_1/behav/xsim`             |
+| `--settings` | Vivado's environment script, which puts `xsim` on the `PATH`          | `<Vivado install dir>/<version>/Vivado/settings64.bat` |
+
+* Note: instruction on how to find the folder and settings64 file, as well as how to set the command in cmd can be found in the `instructions` folder.
+
+### Usage
+
+```
+cd scripts
+python script.py --number 100 --folder "<path to xsim folder>" --settings "<path to settings64.bat>"
+```
+
+| Argument     | Default             | Meaning                                                                             |
+| ------------ | ------------------- | ----------------------------------------------------------------------------------- |
+| `--number`   | `10`                | Number of seeds. Each seed runs both tests, so `--number 100` means 200 simulations |
+| `--folder`   | author's local path | See the table above                                                                 |
+| `--settings` | author's local path | See the table above                                                                 |
+
+Put paths that contain spaces in double quotes. Close any simulation still open in Vivado before running the script.
+
+### What it does
+
+1. Checks the arguments before touching anything: the folder must exist, the settings file must exist and be named `settings64.bat`, and `--number` must be at least 1. An invalid argument stops the script with a clear message and leaves the previous logs untouched.
+2. Draws N distinct random seeds.
+3. For each seed, runs both tests through `xsim ... -testplusarg "UVM_TESTNAME=<test>" -sv_seed <seed>` and captures the output.
+4. Parses the UVM report summary (`UVM_WARNING :`, `UVM_ERROR :`, `UVM_FATAL :` counts) and collects every individual warning, error and fatal message.
+5. Sorts each run into one of three outcomes:
+   - **PASS**: the summary was printed and all three counts are 0
+   - **FAIL**: the summary was printed, but at least one count is non-zero
+   - **Failed to end the simulation**: no UVM summary at all, for example when `xsim` didn't start or the snapshot is missing. The simulator's `stderr` and exit code are logged instead.
+
+### Output
+
+Written to `logs/` in the repository root. It is recreated on every run and ignored by git.
+
+- `summary.txt`: one line per simulation with test, seed, iteration and outcome
+- `errors.txt`: for every run that didn't pass, a header with the test and seed, followed by the offending UVM messages (or `stderr` and the exit code)
+  Every failure is reproducible: the seed in the log can be passed straight to `xsim -sv_seed`.
+
+The terminal shows the final count:
+
+```
+Summary: 200 tests were executed | 200 tests passed | 0 tests failed
+```
+
+### Validation of the script itself
+
+Each outcome was triggered on purpose before trusting a clean result:
+
+- an injected `uvm_error` in `AXI4Lite_test` and an injected `uvm_warning` + `uvm_fatal` in `AXI4Lite_ral_test` → reported as **FAIL**, with the exact messages in `errors.txt`
+- a broken `xsim` command → reported as **Failed to end the simulation**, with xsim's own error message and exit code
+- an invalid folder, a wrong settings file and `--number 0` → rejected before any simulation starts
+
+### Regression result
+
+100 seeds × 2 tests = 200 simulations, 200 PASS / 0 FAIL, in about 9 minutes on a Ryzen 7 7700.
+
+![Regression summary](results/regression_200.png)
+
 ## Results
 
 ### Random regression (`AXI4Lite_test`)
