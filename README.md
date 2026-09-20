@@ -189,7 +189,7 @@ Grouped by what they protect:
 
 ## Testbench validation via mutation testing
 
-Following the methodology of the [ALU](https://github.com/Daniel-eleng/UVM_ALU) and FIFO projects, the checkers were validated by deliberately breaking the RTL and confirming the failure is caught.
+Following the methodology of the [ALU](https://github.com/DanielCazacu25/UVM_based_ALU_testbench) and FIFO projects, the checkers were validated by deliberately breaking the RTL and confirming the failure is caught.
 
 **W1C removed from `AXI4Lite_regfile.v`** — the write-1-to-clear branch was deleted, so the interrupt bit could be set but never cleared. The scoreboard reported **33 errors**, confirming that the cycle-accurate IRQ model built for bug #1 genuinely detects a wrong clear and is not passing by coincidence.
 
@@ -340,7 +340,6 @@ Each outcome was triggered on purpose before trusting a clean result:
 6a: after hardware pulse IRQ_STATUS = 0x1 (expected 0x1)
 6b: after write 0        IRQ_STATUS = 0x1 (expected 0x1)
 6c: after write 1        IRQ_STATUS = 0x0 (expected 0x0)
-
 
 ```
 
