@@ -173,6 +173,31 @@ Two other structures in that file exist for the same reason — a property alone
 
 The same commit also fixed a simulation that never terminated: an unbounded or never-satisfied response property leaves a thread pending indefinitely, which with `run -all` keeps the run phase alive forever. Bounding both response properties removed it.
 
+#### Concurrent write and read to the same address
+
+The write and read agents run in parallel, by design: AXI4-Lite has independent write and read channels, and the virtual sequence exercises them concurrently. A consequence is that a write and a read can target the **same register in overlapping cycles**. The value the read returns then depends on the cycle-level order in which the DUT commits the two accesses: either the old value or the new one. Both are legal DUT behaviour, but the scoreboard predicts exactly one value, so a correct DUT could be reported as failing.
+
+This showed up as read mismatches in the scoreboard. Waveform inspection traced them to a write and a read hitting the same address at the same time. It was a testbench problem (ambiguous stimulus), not a DUT bug.
+
+**Fix: one semaphore per address.** `AXI4Lite_virtual_sequencer` holds an associative array of semaphores, one per legal register address, each created with a single key. The virtual sequence passes the array to `AXI4Lite_wr_seq` and `AXI4Lite_rd_seq`, and every transaction follows the same order:
+
+```systemverilog
+item.randomize();            // 1. the address must be known first
+addr_lock[addr].get(1);      // 2. take the key for that address
+start_item(item);            // 3. only then request the driver
+finish_item(item);
+addr_lock[addr].put(1);      // 4. release the address
+```
+
+The design choices behind it:
+
+- **Per address, not global.** A single global lock would serialise the two channels completely and remove the concurrency that independent AXI channels exist for. With one key per address, the channels block each other only when they target the same register; accesses to different registers still overlap freely.
+- **Randomization moved before `start_item`.** The lock is taken on a specific address, so the address must exist before the lock is requested.
+- **Lock taken before `start_item`.** Once `start_item` returns, the sequence holds the sequencer's grant and the driver is waiting on it. Blocking on a semaphore at that point would leave the driver idle and the grant held while waiting for another resource. The rule is to acquire every resource first, then ask for the driver.
+- **Trade-off.** Randomizing early gives up late randomization, so values cannot depend on state at the moment the driver is ready. The constraints here are static (address among the four legal ones, random data), so nothing is lost.
+
+_Note: this issue was rediscovered during a later code review. The concrete symptoms at the time (how many failures, the exact error messages, which seeds) were not recorded and are not remembered, so they are deliberately not reported here. The description above is reconstructed from the code and the fix._
+
 ## SystemVerilog Assertions
 
 `Testbench/AXI4Lite_assertions.sv` holds 27 concurrent assertions, attached to `AXI4Lite_slave` via `bind` so the RTL is never modified. They are written as **parameterised properties** instantiated per channel rather than as 27 hand-written copies — a `VALID`-stability property, for instance, is written once and asserted five times.
@@ -189,7 +214,7 @@ Grouped by what they protect:
 
 ## Testbench validation via mutation testing
 
-Following the methodology of the [ALU](https://github.com/Daniel-eleng/UVM_ALU) and FIFO projects, the checkers were validated by deliberately breaking the RTL and confirming the failure is caught.
+Following the methodology of the [ALU](https://github.com/DanielCazacu25/UVM_based_ALU_testbench) and FIFO projects, the checkers were validated by deliberately breaking the RTL and confirming the failure is caught.
 
 **W1C removed from `AXI4Lite_regfile.v`** — the write-1-to-clear branch was deleted, so the interrupt bit could be set but never cleared. The scoreboard reported **33 errors**, confirming that the cycle-accurate IRQ model built for bug #1 genuinely detects a wrong clear and is not passing by coincidence.
 
@@ -209,8 +234,8 @@ The assertion layer was validated the same way in the earlier phase of the proje
 | `Testbench/AXI4Lite_inf.sv`                                                                                         | Interface: signals, 3 clocking blocks, 3 matching modports                        |
 | `Testbench/AXI4Lite_wr_item.sv` / `AXI4Lite_rd_item.sv` / `irq_seq_item.sv`                                         | Transaction classes                                                               |
 | `Testbench/AXI4Lite_wr_sequencer.sv` / `AXI4Lite_rd_sequencer.sv` / `irq_sequencer.sv`                              | Sequencers                                                                        |
-| `Testbench/AXI4Lite_virtual_sequencer.sv`                                                                           | Holds handles to all three real sequencers                                        |
-| `Testbench/AXI4Lite_wr_seq.sv` / `AXI4Lite_rd_seq.sv` / `irq_seq.sv`                                                | Constrained-random stimulus sequences                                             |
+| `Testbench/AXI4Lite_virtual_sequencer.sv`                                                                           | Holds handles to all three real sequencers and the per-address semaphores       |
+| `Testbench/AXI4Lite_wr_seq.sv` / `AXI4Lite_rd_seq.sv` / `irq_seq.sv`                                                | Constrained-random stimulus sequences (wr/rd take the address lock)               |
 | `Testbench/AXI4Lite_virtual_sequence.sv`                                                                            | Runs the three sequences concurrently via `fork`/`join`                           |
 | `Testbench/AXI4Lite_wr_driver.sv` / `AXI4Lite_rd_driver.sv` / `irq_driver.sv`                                       | Drivers                                                                           |
 | `Testbench/AXI4Lite_wr_monitor.sv` / `AXI4Lite_rd_monitor.sv` / `irq_monitor.sv`                                    | Monitors (the write monitor publishes on two ports, see bug #1)                   |
@@ -249,6 +274,81 @@ The assertion layer was validated the same way in the earlier phase of the proje
 7. Type `run -all` in the Tcl console so the simulation runs until UVM itself calls `$finish`.
 8. Check the Tcl console for the scoreboard summary, the coverage percentages, and the UVM report summary (`UVM_ERROR` / `UVM_FATAL` counts).
 
+## Regression script
+
+`scripts/script.py` runs both tests (`AXI4Lite_test` and `AXI4Lite_ral_test`) on N random seeds from the command line, without opening the Vivado GUI, and writes a pass/fail summary plus a log of every failure.
+
+### Requirements
+
+- Windows (the script calls `settings64.bat` through `cmd`)
+- Vivado with the Vivado Simulator (`xsim`); tested with 2025.2
+- Python 3 (standard library only, nothing to install)
+- The behavioral simulation must have been run **once from Vivado** (see _How to run_). That step compiles and elaborates the design into the snapshot `AXI4Lite_top_behav`, which the script then re-runs. Both tests live in the same snapshot, so switching tests or seeds needs no recompilation.
+  > After editing any `.sv` / `.v` file, run the simulation from Vivado once more. Otherwise the script keeps running the old snapshot.
+
+### Finding the two paths
+
+| Argument     | What it points to                                                     | Where to find it                                       |
+| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------ |
+| `--folder`   | The folder that holds the compiled snapshot (it contains `xsim.dir/`) | `<project>/<project>.sim/sim_1/behav/xsim`             |
+| `--settings` | Vivado's environment script, which puts `xsim` on the `PATH`          | `<Vivado install dir>/<version>/Vivado/settings64.bat` |
+
+* Note: instruction on how to find the folder and settings64 file, as well as how to set the command in cmd can be found in the `instructions` folder.
+
+### Usage
+
+```
+cd scripts
+python script.py --number 100 --folder "<path to xsim folder>" --settings "<path to settings64.bat>"
+```
+
+| Argument     | Default             | Meaning                                                                             |
+| ------------ | ------------------- | ----------------------------------------------------------------------------------- |
+| `--number`   | `10`                | Number of seeds. Each seed runs both tests, so `--number 100` means 200 simulations |
+| `--folder`   | author's local path | See the table above                                                                 |
+| `--settings` | author's local path | See the table above                                                                 |
+
+Put paths that contain spaces in double quotes. Close any simulation still open in Vivado before running the script.
+
+### What it does
+
+1. Checks the arguments before touching anything: the folder must exist, the settings file must exist and be named `settings64.bat`, and `--number` must be at least 1. An invalid argument stops the script with a clear message and leaves the previous logs untouched.
+2. Draws N distinct random seeds.
+3. For each seed, runs both tests through `xsim ... -testplusarg "UVM_TESTNAME=<test>" -sv_seed <seed>` and captures the output.
+4. Parses the UVM report summary (`UVM_WARNING :`, `UVM_ERROR :`, `UVM_FATAL :` counts) and collects every individual warning, error and fatal message.
+5. Sorts each run into one of three outcomes:
+   - **PASS**: the summary was printed and all three counts are 0
+   - **FAIL**: the summary was printed, but at least one count is non-zero
+   - **Failed to end the simulation**: no UVM summary at all, for example when `xsim` didn't start or the snapshot is missing. The simulator's `stderr` and exit code are logged instead.
+
+### Output
+
+Written to `logs/` in the repository root. It is recreated on every run and ignored by git.
+
+- `summary.txt`: one line per simulation with test, seed, iteration and outcome
+- `errors.txt`: for every run that didn't pass, a header with the test and seed, followed by the offending UVM messages (or `stderr` and the exit code)
+  Every failure is reproducible: the seed in the log can be passed straight to `xsim -sv_seed`.
+
+The terminal shows the final count:
+
+```
+Summary: 200 tests were executed | 200 tests passed | 0 tests failed
+```
+
+### Validation of the script itself
+
+Each outcome was triggered on purpose before trusting a clean result:
+
+- an injected `uvm_error` in `AXI4Lite_test` and an injected `uvm_warning` + `uvm_fatal` in `AXI4Lite_ral_test` → reported as **FAIL**, with the exact messages in `errors.txt`
+- a broken `xsim` command → reported as **Failed to end the simulation**, with xsim's own error message and exit code
+- an invalid folder, a wrong settings file and `--number 0` → rejected before any simulation starts
+
+### Regression result
+
+100 seeds × 2 tests = 200 simulations, 200 PASS / 0 FAIL, in about 9 minutes on a Ryzen 7 7700.
+
+![Regression summary](results/regression_200.png)
+
 ## Results
 
 ### Random regression (`AXI4Lite_test`)
@@ -265,7 +365,6 @@ The assertion layer was validated the same way in the earlier phase of the proje
 6a: after hardware pulse IRQ_STATUS = 0x1 (expected 0x1)
 6b: after write 0        IRQ_STATUS = 0x1 (expected 0x1)
 6c: after write 1        IRQ_STATUS = 0x0 (expected 0x0)
-
 
 ```
 
