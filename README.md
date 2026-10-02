@@ -31,7 +31,7 @@ Unlike a FIFO — where the whole interface is `data_in`, `data_out`, `full`, `e
 
 Two independent FSMs, one per direction, plus the register file.
 
-**Write FSM (2 states).** Deliberately simplified: a write is accepted only when `AWVALID` and `WVALID` are asserted in the _same_ cycle — address and data arriving on separate cycles is not supported. On acceptance the slave pulses `reg_wr_en` for exactly one cycle, latches address and data, and raises `BVALID`. It returns to idle on the B handshake.
+**Write FSM (2 states).** Deliberately simplified: the slave never accepts the address on its own. It keeps `AWREADY` and `WREADY` low until `AWVALID` and `WVALID` are both asserted, then accepts address and data together. AXI allows a slave to wait for both, and a master must hold `VALID` until its handshake completes, so a master that sends the address cycles before the data still works, only with extra wait cycles. The only master that would deadlock is one that waits for `AWREADY` before asserting `WVALID`, which the AXI handshake rules forbid. On acceptance the slave pulses `reg_wr_en` for exactly one cycle, latches address and data, and raises `BVALID`. It returns to idle on the B handshake.
 
 **Read FSM (3 states: IDLE → WAIT → DATA).** The extra `RD_WAIT` state exists to absorb the register file's one-cycle read latency: `reg_rd_en` pulses in one cycle, but `reg_rd_data` only becomes valid the cycle after. Without `RD_WAIT` the slave would drive stale data on `RDATA`. This is the same class of latency handled in the FIFO project's read monitor, here pushed into the RTL instead.
 
@@ -151,7 +151,7 @@ The new `cmd_wr` port existed in the monitor and the matching imp existed in the
 
 Fixed by adding the connection, and guarded against the whole class of mistake by checking subscriber counts in `end_of_elaboration_phase` with a `uvm_fatal`. A missing connection now fails loudly at elaboration instead of silently corrupting results at runtime.
 
-#### Assertions: a bound cannot be a property argument
+#### Assertions: XSim rejected a bound passed as a property argument
 
 The two bounded-response properties began as one generic property, kept commented at the bottom of `AXI4Lite_assertions.sv`:
 
@@ -162,7 +162,7 @@ property valid_must_occur_after_addr_data_accepted(logic accepted, logic VALID);
 endproperty
 ```
 
-The intention was to pass the bound in as a third argument, so a single property could serve both channels. The simulator rejected it: a cycle-delay range must be an elaboration-time constant, and a property formal is not one. Signals can be arguments; a number of cycles cannot.
+The intention was to pass the bound in as a third argument, so a single property could serve both channels. The simulator (Vivado XSim) rejected it: a cycle-delay range must be an elaboration-time constant. The SystemVerilog standard does allow a property formal in that position as long as the actual argument is a constant, so this is a tool limitation rather than a language rule, but XSim did not accept it.
 
 That forced a split into `bvalid_bounded` and `rvalid_bounded` with two separate `localparam`s — which turned out to be the correct answer regardless, because the two bounds genuinely differ: `BVALID` appears 1 cycle after a write is accepted, `RVALID` 2 cycles after a read address is accepted, because of the `RD_WAIT` state. A single shared bound would have been either too permissive on B or a false failure on R.
 
@@ -170,8 +170,6 @@ Two other structures in that file exist for the same reason — a property alone
 
 - **Stability is precomputed, not checked inside the property.** Each payload is shadowed in a registered copy (`awaddr_q`, `wdata_q`, …), compared in a `wire`, and the resulting flag is passed into `no_change_until_handshake_finishes` as an argument.
 - **"No response without a request" needs memory**, which a property does not have. `wr_pending` and `rd_pending` are maintained as small state machines inside the checker — set on the request handshake, cleared on the response handshake — so the assertion reduces to `BVALID |-> wr_pending`.
-
-The same commit also fixed a simulation that never terminated: an unbounded or never-satisfied response property leaves a thread pending indefinitely, which with `run -all` keeps the run phase alive forever. Bounding both response properties removed it.
 
 #### Concurrent write and read to the same address
 
